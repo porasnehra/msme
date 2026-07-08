@@ -1,0 +1,49 @@
+{
+  "best_model": "Gradient Boosting",
+  "all_results": {
+    "Ridge Regression": {
+      "r2": 0.6624,
+      "mae": 3.827,
+      "rmse": 4.804
+    },
+    "Random Forest": {
+      "r2": 0.6396,
+      "mae": 3.965,
+      "rmse": 4.964
+    },
+    "Gradient Boosting": {
+      "r2": 0.6984,
+      "mae": 3.627,
+      "rmse": 4.541
+    },
+    "XGBoost": {
+      "r2": 0.6943,
+      "mae": 3.661,
+      "rmse": 4.572
+    },
+    "Deep Neural Network (MLP)": {
+      "r2": 0.6871,
+      "mae": 3.681,
+      "rmse": 4.625
+    }
+  },
+  "n_samples": 12000,
+  "features": [
+    "sector_encoded",
+    "business_vintage_months",
+    "monthly_upi_inflow",
+    "monthly_upi_outflow",
+    "upi_transaction_count",
+    "avg_transaction_value",
+    "upi_inflow_growth_rate",
+    "cash_flow_volatility",
+    "avg_bank_balance",
+    "gst_monthly_turnover",
+    "gst_filing_regularity",
+    "gst_late_filings_count",
+    "digital_invoice_count_monthly",
+    "on_time_payment_ratio",
+    "bounced_payment_count",
+    "existing_loan_emi_ratio"
+  ]
+}

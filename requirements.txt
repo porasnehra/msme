@@ -6,3 +6,4 @@ xgboost==3.3.0
 numpy==2.4.4
 pandas==3.0.2
 joblib==1.5.3
+shap==0.52.0

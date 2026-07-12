@@ -18,10 +18,34 @@ are committed to the repo alongside this file (they are small, <5MB).
 import os
 import joblib
 import numpy as np
+import shap
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, List
+
+# ---------------------------------------------------------------------------
+# Human-readable labels for each feature, used in the explainability output
+# so a credit officer sees "GST Filing Regularity" instead of "gst_filing_regularity"
+# ---------------------------------------------------------------------------
+FEATURE_LABELS = {
+    "sector_encoded": "Business Sector",
+    "business_vintage_months": "Business Vintage",
+    "monthly_upi_inflow": "Monthly UPI Inflow",
+    "monthly_upi_outflow": "Monthly UPI Outflow",
+    "upi_transaction_count": "UPI Transaction Count",
+    "avg_transaction_value": "Average Transaction Value",
+    "upi_inflow_growth_rate": "UPI Inflow Growth Rate",
+    "cash_flow_volatility": "Cash Flow Volatility",
+    "avg_bank_balance": "Average Bank Balance",
+    "gst_monthly_turnover": "GST Monthly Turnover",
+    "gst_filing_regularity": "GST Filing Regularity",
+    "gst_late_filings_count": "Late GST Filings",
+    "digital_invoice_count_monthly": "Digital Invoice Volume",
+    "on_time_payment_ratio": "On-Time Payment Ratio",
+    "bounced_payment_count": "Bounced Payments",
+    "existing_loan_emi_ratio": "Existing Loan EMI Ratio",
+}
 
 # ---------------------------------------------------------------------------
 # Load model artifacts once at startup
@@ -43,6 +67,19 @@ except Exception as e:
     MODEL_LOAD_ERROR = str(e)
 
 VALID_SECTORS = list(sector_encoder.keys()) if sector_encoder else []
+
+# ---------------------------------------------------------------------------
+# Explainable AI: SHAP TreeExplainer
+# ---------------------------------------------------------------------------
+# Works directly with tree-based models (Gradient Boosting / Random Forest /
+# XGBoost) with no extra training step - it introspects the trees themselves.
+# If the winning model in model.pkl is ever swapped for something SHAP's
+# TreeExplainer doesn't support (e.g. the MLP neural net), this falls back
+# to None and /predict simply omits the explanation rather than failing.
+try:
+    explainer = shap.TreeExplainer(model) if MODEL_LOADED else None
+except Exception:
+    explainer = None
 
 # ---------------------------------------------------------------------------
 # FastAPI app
@@ -138,11 +175,20 @@ class MSMEInput(BaseModel):
     )
 
 
+class FeatureContribution(BaseModel):
+    feature: str
+    value_provided: float
+    impact: float
+    direction: Literal["increased", "decreased"]
+
+
 class PredictionResponse(BaseModel):
     financial_health_score: float
     risk_category: Literal["Low Risk", "Medium Risk", "High Risk"]
     loan_recommendation: str
     model_used: str
+    base_score: float
+    top_factors: List[FeatureContribution]
 
 
 # ---------------------------------------------------------------------------
@@ -249,11 +295,49 @@ def predict(data: MSMEInput):
     category = get_risk_category(score)
     recommendation = get_recommendation(score, category)
 
+    # ------------------------------------------------------------------
+    # Explainable AI: compute per-feature SHAP contributions for THIS
+    # specific business, so a credit officer can see exactly why the
+    # score came out the way it did (not just a black-box number).
+    # ------------------------------------------------------------------
+    base_score = score
+    top_factors: List[FeatureContribution] = []
+
+    if explainer is not None:
+        try:
+            shap_values = explainer.shap_values(x_scaled)[0]
+
+            expected_value = explainer.expected_value
+            if isinstance(expected_value, (list, np.ndarray)):
+                expected_value = np.asarray(expected_value).ravel()[0]
+            base_score = round(float(expected_value), 2)
+
+            ranked = sorted(
+                zip(feature_names, shap_values),
+                key=lambda pair: abs(pair[1]),
+                reverse=True,
+            )[:5]  # top 5 drivers of this specific score
+
+            for feat, impact in ranked:
+                top_factors.append(
+                    FeatureContribution(
+                        feature=FEATURE_LABELS.get(feat, feat),
+                        value_provided=float(feature_values[feat]),
+                        impact=round(float(impact), 2),
+                        direction="increased" if impact >= 0 else "decreased",
+                    )
+                )
+        except Exception:
+            # Explainability is a bonus, never let it break the core prediction
+            top_factors = []
+
     return PredictionResponse(
         financial_health_score=round(score, 2),
         risk_category=category,
         loan_recommendation=recommendation,
         model_used=type(model).__name__,
+        base_score=base_score,
+        top_factors=top_factors,
     )
 
 

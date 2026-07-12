@@ -74,13 +74,4 @@ Valid `sector` values: `grocery_retail`, `restaurant_food`,
 `textile_apparel`, `electronics_repair`, `manufacturing_small`,
 `services_professional`, `pharmacy_medical`, `wholesale_trade`.
 
-## Notes for your hackathon pitch
 
-- The score is built from a weighted blend of 7 sub-signals (revenue
-  strength, GST compliance, payment discipline, cash-flow stability,
-  debt burden, business vintage, growth trend) plus non-linear
-  interaction effects — which is exactly why a tree-based model
-  (Gradient Boosting) captures it better than plain linear regression.
-- For the real product, `train_model.py`'s `generate_dataset()` function
-  is the place you'd swap synthetic data for a real pipeline pulling
-  from an Account Aggregator (UPI), GSTN API, and invoicing platforms.

@@ -34,31 +34,6 @@ The dataset/model files are already generated and included — you do
 **not** need to re-run `train_model.py` before deploying. It's included
 so you can regenerate or retrain later (e.g. once you swap in real data).
 
-## Deploy on Render (phone-only, no laptop needed)
-
-**Step 1 — Get these files into a GitHub repo**
-1. Go to github.com on your phone browser, create a new repository (e.g. `msme-financial-health-api`).
-2. Use "Add file → Upload files" and upload every file in this folder
-   (`app.py`, `model.pkl`, `scaler.pkl`, `sector_encoder.pkl`,
-   `feature_names.pkl`, `requirements.txt`, `render.yaml`, and optionally
-   `train_model.py` + `msme_financial_data.csv` + `metrics.json`).
-3. Commit directly to the `main` branch.
-
-**Step 2 — Create the Render service**
-1. Go to render.com → sign in → **New → Web Service**.
-2. Connect your GitHub account and select the repo you just created.
-3. Render should auto-detect `render.yaml` and pre-fill everything. If not, set manually:
-   - **Environment:** Python 3
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn app:app --host 0.0.0.0 --port $PORT`
-   - **Plan:** Free
-4. Click **Create Web Service**. First deploy takes 2–5 minutes.
-
-**Step 3 — Test it**
-Once deployed, Render gives you a URL like `https://msme-financial-health-api.onrender.com`.
-- Visit `/docs` for interactive Swagger UI (test predictions right in the browser).
-- Visit `/health` to confirm the model loaded correctly.
-
 ## Example request
 
 ```
